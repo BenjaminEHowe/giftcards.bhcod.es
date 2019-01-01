@@ -3,6 +3,22 @@ function addCard() {
 		"title": "Gift Card Brand",
 		"input": "select",
 		"inputOptions": getProvidersForSWAL(),
+		"showCancelButton": true,
+	}).then((result) => {
+		if(result.dismiss) {
+			return Promise.reject("Cancelled");
+		}
+
+		console.log(providers[result.value].requiredData);
+	}).catch(function(error) {
+		switch(error) {
+			case "Cancelled":
+				// if the user merely cancelled, do nothing
+				break;
+			
+			default:
+				console.log(error);
+		}
 	});
 }
 
