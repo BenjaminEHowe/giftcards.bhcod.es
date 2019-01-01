@@ -1,0 +1,18 @@
+server {
+	listen 80;
+	listen [::]:80;
+
+	root /path/to/the/repo/public;
+	index index.html;
+	server_name giftcards-dev.bhcod.es;
+
+	location / {
+		try_files $uri $uri/ =404;
+	}
+
+	location /api {
+		proxy_pass https://giftcards-alpha.bhcod.es;
+		proxy_set_header Host "giftcards-alpha.bhcod.es";
+		proxy_ssl_server_name on;
+	}
+}
