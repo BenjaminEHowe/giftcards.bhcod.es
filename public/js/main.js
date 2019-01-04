@@ -37,13 +37,14 @@ function addCard() {
 		return result.value;
 	}).then((result) => {
 		let card = new Object();
+		card.data = new Object();
 		for (let i = 0; i < result.length; i++) {
-			card[provider.requiredData[i].slug] = result[i];
+			card.data[provider.requiredData[i].slug] = result[i];
 		}
 		card.slug = provider.slug;
 		giftcards["Default"].push(card);
 		localStorage.giftcards = JSON.stringify(giftcards);
-		displayGiftCards();
+		updateGiftCard("Default", giftcards["Default"].length - 1).then(() => {displayGiftCards()});
 	}).catch(function(error) {
 		switch(error) {
 			case "Cancelled":
@@ -58,7 +59,7 @@ function addCard() {
 
 function displayGiftCards() {
 	// if no giftcards are defined, don't do anything
-	if (!giftcards) {
+	if (!giftcards["Default"].length) {
 		return;
 	}
 
@@ -75,7 +76,30 @@ function displayGiftCards() {
 			td.appendChild(logo);
 			tr.appendChild(td);
 		}
-		// TODO: name and balance
+		{
+			let td = document.createElement("td");
+			let name = undefined;
+			if (giftcards["Default"][i].name) {
+				name = document.createTextNode(giftcards["Default"][i].name);
+			} else {
+				name = document.createTextNode(`${providers[giftcards["Default"][i].slug].name} gift card`);
+			}
+			td.appendChild(name);
+			tr.appendChild(td);
+		}
+		{
+			let td = document.createElement("td");
+			let balance = document.createTextNode(
+				new Intl.NumberFormat(
+					navigator.language,
+					{
+						style: "currency",
+						currency: giftcards["Default"][i].currency,
+					}
+				).format(giftcards["Default"][i].balance));
+			td.appendChild(balance);
+			tr.appendChild(td);
+		}
 		tbody.appendChild(tr);
 	}
 	table.appendChild(tbody);
@@ -94,6 +118,37 @@ function getProvidersForSWAL() {
 function showOptions() {
 	// TODO
 	swal({"title": "TODO"});
+}
+
+function updateGiftCard(tab, index) {
+	return fetch(`/api/${giftcards[tab][index].slug}/getBalance`, {
+		"method": "POST",
+		"headers": {
+			"Content-Type": "application/json",
+		},
+		"body": JSON.stringify(giftcards[tab][index].data),
+	}).then(function(result) {
+		return result.json();
+	}).then(function(json) {
+		console.log(json);
+		giftcards[tab][index].balance = json.balance;
+		giftcards[tab][index].currency = json.currency;
+		giftcards[tab][index].balanceAsOf = new Date();
+		localStorage.giftcards = JSON.stringify(giftcards);
+	});
+}
+
+function updateGiftCards() {
+	let promises = new Array();
+	Object.keys(giftcards).forEach(function(key) {
+		for(let i = 0; i < giftcards[key].length; i++) {
+			if (((new Date().getTime() - new Date(giftcards[key][i].balanceAsOf).getTime()) / 1000) > 60 * 5) {
+				// if the balance is more than 5 minutes old, refresh it
+				promises.push(updateGiftCard(key, i));
+			}
+		}
+	});
+	return Promise.all(promises);
 }
 
 function updateProviders() {
@@ -151,8 +206,8 @@ if (providers && ((new Date().getTime() - providersAsOf.getTime()) / 1000) < 60 
 	updateProviders();
 }
 
-// display gift cards
-displayGiftCards();
+// upadte & display gift cards
+updateGiftCards().then(() => {displayGiftCards()});
 
 // bind event listeners
 document.getElementById("addCard").addEventListener("click", addCard);
