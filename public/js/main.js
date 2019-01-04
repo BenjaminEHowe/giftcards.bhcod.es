@@ -89,14 +89,19 @@ function displayGiftCards() {
 		}
 		{
 			let td = document.createElement("td");
-			let balance = document.createTextNode(
-				new Intl.NumberFormat(
-					navigator.language,
-					{
-						style: "currency",
-						currency: giftcards["Default"][i].currency,
-					}
-				).format(giftcards["Default"][i].balance));
+			let balance = undefined;
+			try {
+				balance = document.createTextNode(
+					new Intl.NumberFormat(
+						navigator.language,
+						{
+							style: "currency",
+							currency: giftcards["Default"][i].currency,
+						}
+					).format(giftcards["Default"][i].balance));
+			} catch(e) {
+				balance = document.createTextNode("error");
+			}
 			td.appendChild(balance);
 			tr.appendChild(td);
 		}
